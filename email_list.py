@@ -18,7 +18,7 @@ import os
 import sys
 from pathlib import Path
 
-def email_list(original_url, ent_num, ent_name):
+def email_list(ent_id, ent_num, ent_name, ent_state, ent_zip, ent_yr, ent_naic, original_url):
     start = time.time()
     unscraped = deque([original_url])  
     scraped = set()  
@@ -175,25 +175,31 @@ if __name__ == '__main__':
         sys.exit()
     try:
         
-        df.dropna(subset=['ENTERPRISE_NBR','COMPANY','WEBSITE'], inplace = True) 
-        output_header = ['Company_number', 'Name', 'Website', 'Email']
+        df = df.fillna(str(0)) 
+        output_header = ['ID', 'ENTERPRISE_NBR', 'COMPANY', 'STATE', 'ZIPPOSTAL_CODE', 'YEAR_FOUNDED', 'NAICS6', 'WEBSITE', 'EMAIL']
         # Creating the output file
         outpath = Path(outfile)
         os.makedirs(outpath.parent, exist_ok = True)
         with open(outfile, mode='w') as csvfile:
             csvfile.write(','.join(output_header)+'\n')
         for _, row in df.iterrows():
-            ent_site = row[23]
-            ent_num = row[0]
-            ent_name = row[1]
+            ent_id = row[0]
+            ent_num = row[1]
+            ent_name = row[2]
+            ent_state = row[3]
+            ent_zip = row[4]
+            ent_yr = row[5]
+            ent_naic = row[6]
+            ent_site = row[7]
+            
             if not ent_site.startswith('www'):
                 ent_site = 'www.'+ ent_site
             ent_site = 'http://' + ent_site
-            out_emails = email_list(ent_site, ent_num, ent_name)
+            out_emails = email_list(ent_id, ent_num, ent_name, ent_state, ent_zip, ent_yr, ent_naic, ent_site)
             if len(out_emails)>0:   
                 tmp = []
                 for mail in list(out_emails):
-                    tmp.append([ent_num, ent_name, ent_site, mail])
+                    tmp.append([ent_id, ent_num, ent_name, ent_state, ent_zip, ent_yr, ent_naic, ent_site, mail])
                     
                 df = pd.DataFrame(tmp)
                 df.to_csv(outfile, mode = 'a', index=False, header = False)
