@@ -17,8 +17,9 @@ import datetime
 import os
 import sys
 from pathlib import Path
+import glob
 
-def email_list(ent_id, ent_num, ent_name, ent_state, ent_zip, ent_yr, ent_naic, original_url):
+def email_list( ent_num, ent_name, original_url):
     start = time.time()
     unscraped = deque([original_url])  
     scraped = set()  
@@ -150,11 +151,25 @@ if __name__ == '__main__':
     company_failure_logger.addHandler(failure_file_handler)
     
     try:
-        assert len(sys.argv) == 3, "Wrong number of inputs!" 
-        infile, outfile = sys.argv[1:]
-        #infile = 'TX_small_business.csv'
-        #outfile = 'TX_small_business_output_1.csv'
-        df = pd.read_csv(infile, dtype = str)
+        #assert len(sys.argv) == 3, "Wrong number of inputs!" 
+        #infile, outfile = sys.argv[1:]
+        
+
+        path = r'resources_new' # use your path
+        all_files = glob.glob(path + "/*.csv")
+
+        li = []
+
+        for filename in all_files:
+            df = pd.read_csv(filename, index_col=None, header=0)
+            li.append(df)
+
+        #frame = pd.concat(li, axis=0, ignore_index=True)
+        output_header = ['ENTERPRISE_NBR','COMPANY','FORMER_NAME','NOTES','FEIN','PO_BOX_BLDG1','STREET','PO_BOX_BLDG2','PO_BOX_BLDG3','CITY','STATE','ZIPPOSTAL_CODE','PROVINCE','COUNTRY','PHONE','TOLLFREE','FAX','EMAIL','WEBSITE']
+        df = pd.concat([df[output_header] for df in li], ignore_index=True)
+        df.to_csv('all_inputs_final.csv', index=False, header = output_header)
+        outfile = 'small_business_emails.csv'
+        #df = pd.read_csv(infile, dtype = str)
     except AssertionError as e:
         module_logger.critical(e)
         logging.shutdown()
@@ -176,30 +191,43 @@ if __name__ == '__main__':
     try:
         
         df = df.fillna(str(0)) 
-        output_header = ['ID', 'ENTERPRISE_NBR', 'COMPANY', 'STATE', 'ZIPPOSTAL_CODE', 'YEAR_FOUNDED', 'NAICS6', 'WEBSITE', 'EMAIL']
+        df = df.astype(str)
+        output_header = ['ENTERPRISE_NBR','COMPANY','FORMER_NAME','NOTES','FEIN','PO_BOX_BLDG1','STREET','PO_BOX_BLDG2','PO_BOX_BLDG3','CITY','STATE','ZIPPOSTAL_CODE','PROVINCE','COUNTRY','PHONE','TOLLFREE','FAX','EMAIL','WEBSITE', 'Email']
+        #output_header = ['ID', 'ENTERPRISE_NBR', 'COMPANY', 'STATE', 'ZIPPOSTAL_CODE', 'YEAR_FOUNDED', 'NAICS6', 'WEBSITE', 'EMAIL']
         # Creating the output file
         outpath = Path(outfile)
         os.makedirs(outpath.parent, exist_ok = True)
         with open(outfile, mode='w') as csvfile:
             csvfile.write(','.join(output_header)+'\n')
         for _, row in df.iterrows():
-            ent_id = row[0]
-            ent_num = row[1]
-            ent_name = row[2]
-            ent_state = row[3]
-            ent_zip = row[4]
-            ent_yr = row[5]
-            ent_naic = row[6]
-            ent_site = row[7]
+            ent_num = row[0]
+            ent_name = row[1]
+            ent_fr_name = row[2]
+            ent_notes = row[3]
+            ent_fein = row[4]
+            ent_bld1 = row[5]
+            ent_st = row[6]
+            ent_bld2 = row[7]
+            ent_bld3 = row[8]
+            ent_city = row[9]
+            ent_state = row[10]
+            ent_zip = row[11]
+            ent_pro = row[12]
+            ent_cntry = row[13]
+            ent_phone = row[14]
+            ent_tf = row[15]
+            ent_fax = row[16]
+            ent_email = row[17]
+            ent_site = row[18]
             
             if not ent_site.startswith('www'):
                 ent_site = 'www.'+ ent_site
             ent_site = 'http://' + ent_site
-            out_emails = email_list(ent_id, ent_num, ent_name, ent_state, ent_zip, ent_yr, ent_naic, ent_site)
+            out_emails = email_list( ent_num, ent_name, ent_site)
             if len(out_emails)>0:   
                 tmp = []
                 for mail in list(out_emails):
-                    tmp.append([ent_id, ent_num, ent_name, ent_state, ent_zip, ent_yr, ent_naic, ent_site, mail])
+                    tmp.append([ent_num, ent_name, ent_fr_name, ent_notes,  ent_fein, ent_bld1, ent_st, ent_bld2, ent_bld3, ent_city, ent_state, ent_zip, ent_pro, ent_cntry,  ent_phone,  ent_tf, ent_fax, ent_email, ent_site, mail])
                     
                 df = pd.DataFrame(tmp)
                 df.to_csv(outfile, mode = 'a', index=False, header = False)
